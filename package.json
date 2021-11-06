@@ -1,0 +1,26 @@
+{
+  "name": "nexo-task",
+  "version": "1.0.0",
+  "description": "Test task for Nexo",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git@github-dastansam:dastansam/nexo-task.git"
+  },
+  "author": "Dastanbek Samatov",
+  "license": "Apache-2.0",
+  "dependencies": {
+    "@truffle/hdwallet-provider": "^1.5.1",
+    "bip39": "^3.0.4",
+    "bluebird": "^3.7.2",
+    "dotenv": "^10.0.0",
+    "ethereumjs-wallet": "^1.0.2",
+    "express": "^4.17.1",
+    "node-fetch": "^3.0.0",
+    "redis": "^3.1.2",
+    "web3": "^1.6.0"
+  }
+}
