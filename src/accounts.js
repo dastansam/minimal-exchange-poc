@@ -42,6 +42,8 @@ const moveToColdWallet = async (userId, txHash) => {
     }
 
     const web3 = new Web3(wallet);
+    
+    const BN = web3.utils.BN;
 
     const receipt = await web3.eth.getTransactionReceipt(txValue.hash);
 
@@ -51,11 +53,19 @@ const moveToColdWallet = async (userId, txHash) => {
     // make sure the recipient of tx is the current wallet
     if (receipt.to.toLowerCase() !== wallet.getAddress().toLowerCase()) return false;
 
+    const gasPrice = await web3.eth.getGasPrice();
+
+    const gasFees = new BN(21000).mul(new BN(gasPrice));
+
+    const value = new BN(txValue.value).sub(gasFees);
+
     // construct transaction payload
     const txPayload = {
         from: wallet.getAddress(),
         to: config.coldWallet,
-        value: txValue.value,
+        gas: 21000,
+        gasPrice: new BN(gasPrice),
+        value
     };
 
     const txReceipt = await web3.eth.sendTransaction(txPayload);
