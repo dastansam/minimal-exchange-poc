@@ -6,23 +6,25 @@ const router = express.Router();
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
-router.get('/:user', (req, res) => {
-    WalletService.derive(req.params.user)
-        .then((wallet) => res.send(wallet))
-        .catch((e) => res.send(`error getting wallet ${e}`));
+/**
+ * Return wallet for a given userId
+ */
+router.get('/:userId', (req, res) => {
+    WalletService.derive(req.params.userId)
+        .then((wallet) => res.json({wallet}))
+        .catch((e) => res.json({error: e}));
 });
 
-router.post("/:user/move", (req, res) => {
+router.post("/:userId/move", (req, res) => {
     console.log('body ', req.body);
     WalletService.moveToColdWallet(
-        req.params.user, 
-        parseInt(req.body.amount)
+        req.params.userId, 
+        req.body.txHash
         ).then((tx_receipt) => {
-            console.log('lol');
-            res.send(tx_receipt);
+            res.json(tx_receipt);
         }).catch((e) => {
             console.log(e);
-            res.send('error sending');
+            res.end('error sending');
         })
 });
 

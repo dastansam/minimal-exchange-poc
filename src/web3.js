@@ -9,8 +9,8 @@ const HDWalletProvider = require("@truffle/hdwallet-provider");
 const Web3 = require("web3");
 const bip39 = require("bip39");
 const { hdkey } = require("ethereumjs-wallet");
+const config = require('./config');
 
-require('dotenv').config();
 
 /**
  * Get provider instance for a given wallet
@@ -20,15 +20,15 @@ require('dotenv').config();
 const getRopstenProvider = (addressIndex = 0) => {
     // workaround for issue with Ropsten and HDWalletProvider
     // https://github.com/trufflesuite/truffle/issues/2567#issuecomment-623530229
-    const wsProvider = new Web3.providers.WebsocketProvider(process.env.ROPSTEN_WSS);
+    const wsProvider = new Web3.providers.WebsocketProvider(config.ropstenUrl);
     HDWalletProvider.prototype.on = wsProvider.on.bind(wsProvider);
 
     // Contstruct HD Wallet provider
     const provider = new HDWalletProvider({
         providerOrUrl: wsProvider,
-        privateKeys: [process.env.MAIN_PRIVATE_KEY],
-        mnemonic: process.env.MAIN_MNEMONIC,
-        derivationPath: process.env.DERIVATION_PATH,
+        privateKeys: [config.privateKey],
+        mnemonic: config.mnemonic,
+        derivationPath: config.derivationPath,
         addressIndex,
     });
 
@@ -49,12 +49,12 @@ const getProvider = (addressIndex = 0) => {
  */
 const getHdWallet = () => {
     // Convert the mnemonic phrase to seed
-    const mnemonicAsSeed = bip39.mnemonicToSeedSync(process.env.MAIN_MNEMONIC);
+    const mnemonicAsSeed = bip39.mnemonicToSeedSync(config.mnemonic);
 
     // instantiate instance of HD wallet from the mnemonic seed
     const hdWallet = hdkey.fromMasterSeed(mnemonicAsSeed);
 
-    if (!bip39.validateMnemonic(process.env.MAIN_MNEMONIC)) {
+    if (!bip39.validateMnemonic(config.mnemonic)) {
         throw new Error("Invalid mnenomic phrase");
     }
     return hdWallet;

@@ -4,6 +4,7 @@ const fetch = (...args) => import('node-fetch').then(({default: fetch}) => fetch
 const redis = require("./redis");
 const Chain = require("./eth");
 const { web3 } = require('./web3');
+const config = require('./config');
 
 /**
  * Starts the process of monitoring transactions
@@ -148,7 +149,7 @@ const _processTx = async (tx, erc20=false) => {
     };
     
     // Submit the webhook
-    fetch(`${process.env.WEBHOOK_URL}/deposits`, {
+    fetch(`${config.webhookUrl}/deposits`, {
         method: 'POST',
         body: JSON.stringify(webhookPayload),
         headers: { "Content-Type": 'application/json'}
