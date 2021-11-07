@@ -27,6 +27,12 @@ To run tests:
 ```
 yarn run test
 ```
+## docker-compose
+Docker compose spawns all the necessary services with one command:
+
+```
+docker-compose up
+```
 
 ## Example
 1. First, take any random integer user id and get a deposit address (see below).
