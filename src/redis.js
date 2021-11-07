@@ -5,7 +5,6 @@ const config = require('./config');
 // Make Redis work with promises
 bluebird.promisifyAll(redis.RedisClient.prototype);
 bluebird.promisifyAll(redis.Multi.prototype);
-
 // Create redis client
 const client = redis.createClient({host: process.env.REDIS_HOST || "127.0.0.1"});
 
