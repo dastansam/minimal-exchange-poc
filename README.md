@@ -9,6 +9,7 @@ This is the minimalistic POC project that tries to show how CEX operates. Curren
 - `env` variables
 
 ## Run
+NOTE: This was mostly tested with testnets, `Ropsten` and `Kovan`. So, for the best performance test in this networks.  
 Before running the services, make sure your `redis-server` is up.
 Also make sure you have installed all the dependencies:
 ```
@@ -26,12 +27,12 @@ To run tests:
 ```
 yarn run test
 ```
+
 ## Example
 1. First, take any random integer user id and get a deposit address (see below).
 2. Then deposit some `ether` (on `Ropsten`) to the following address. After the transaction is confirmed, it should send a webhook. 
 3. Get deposit transaction   hash from the [webhook url](https://61439649c5b553001717d029.mockapi.io/deposits).
 4. Move funds to a cold wallet (see below)
-
 
 ## Hierarchical Deterministic (HD) Wallets
 In a traditional CEX when user wants to deposit `ETH` or `ERC20` tokens, a unique deposit address is created. User deposits the funds and CEX detects the deposit and updates it's records. There are essentially three ways to accomplish this:
