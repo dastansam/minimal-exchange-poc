@@ -15,8 +15,11 @@ router.get('/:userId', (req, res) => {
         .catch((e) => res.json({error: e}));
 });
 
+/**
+ * Move funds from the deposit wallet to cold wallet
+ */
 router.post("/:userId/move", (req, res) => {
-    console.log('body ', req.body);
+    console.log('[POST] /:userId/move ', req.body);
     WalletService.moveToColdWallet(
         req.params.userId, 
         req.body.txHash
@@ -24,10 +27,12 @@ router.post("/:userId/move", (req, res) => {
             res.json(tx_receipt);
         }).catch((e) => {
             console.log(e);
-            res.end('error sending');
-        })
+            res.end({error: 'Error moving funds: ' + e});
+        });
 });
 
 app.use("/wallet", router);
-console.log("Started listening on 3000");
+
+console.log("Started listening on port 3000");
+
 app.listen(3000);

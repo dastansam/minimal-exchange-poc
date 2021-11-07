@@ -2,7 +2,7 @@ const Web3 = require('web3');
 const fetch = (...args) => import('node-fetch').then(({default: fetch}) => fetch(...args));
 
 const redis = require("./redis");
-const Chain = require("./eth");
+const Chain = require("./sub");
 const { web3 } = require('./web3');
 const config = require('./config');
 
@@ -15,8 +15,6 @@ const launch = async () => {
     // TO-DO: replace places: latest should be last
     lastSyncedBlock = latestBlock || lastSyncedBlock;
 
-    console.log('[BLOCK SYNC] last synced block: ', lastSyncedBlock);
-
     // Launch syncing block process
     Chain.syncBlocks(lastSyncedBlock, {
         onBlock: _updateBlockHeader,
@@ -26,10 +24,6 @@ const launch = async () => {
             }
         },
         onERC20Transfers: async (logs) => {
-            console.log(
-                `[RECEIVING LOGS]getting logs: `,
-                logs
-            );
             for (let i in logs) {
                 await _processTx(
                     _formatERC20Transfer(logs[i],), 
@@ -59,7 +53,6 @@ const _formatAddress = (data) => {
  * @returns 
  */
 const _formatERC20Transfer = (txData) => {
-    console.log('[FORMAT] log: ', txData);
     const from = _formatAddress(txData.topics[1]);
     const to = _formatAddress(txData.topics[2]);
     const contract = txData.address;
@@ -78,7 +71,7 @@ const _formatERC20Transfer = (txData) => {
  * @returns 
  */
 const _updateBlockHeader = async (header) => {
-    console.log('getting new block', header);
+    console.log('[TRACKING] Updating last synced block ', header);
     return await redis.setAsync("last-synced-block", header);
 };
 
@@ -94,10 +87,10 @@ const _processTx = async (tx, erc20=false) => {
     // for erc20 Transfer event log, second indice of topics is the `dest` wallet
     const walletAddress = `${tx.to}`.toLowerCase();
 
-    console.log('[PROCESS TX] to: ', walletAddress);
+    console.log('[TRACKING] TO: ', walletAddress);
+    
     // check if the derived address is our deposit address
     const watchedAddress = await redis.existsAsync(`eth:wallet:${walletAddress}`);
-    console.log(`[PROCESS TX] is derived `, watchedAddress);
     if (watchedAddress !== 1) {
         return false;
     }
@@ -111,7 +104,8 @@ const _processTx = async (tx, erc20=false) => {
     if (txExists === 1) {
         return false;
     }
-    console.log('[PROCESS TX] ', tx);
+
+    console.log('[TRACKING] TX: ', tx);
 
     // check if tx log exists for the deposit address
     const logExists = await redis.existsAsync(`eth:wallet:txs:${walletAddress}`);
@@ -129,11 +123,9 @@ const _processTx = async (tx, erc20=false) => {
         txData = Object.assign(txData, parsedTxData);
     }
     
-    console.log('[PROCESS TX] resultTxData: ', txData);
+    console.log('[TRACKING] TxData: ', txData);
 
     await redis.setAsync(`eth:wallet:txs:${walletAddress}`, JSON.stringify(txData));
-    // store the hash of the processed tx
-    await redis.setAsync(`eth:tx:${tx.hash}`, JSON.stringify(tx));
     
     // TO_DO: for erc20, get token decimals and compute amount of tokens
     // const amountInToken = tx.value / 1**(token.decimals);
@@ -154,8 +146,8 @@ const _processTx = async (tx, erc20=false) => {
         body: JSON.stringify(webhookPayload),
         headers: { "Content-Type": 'application/json'}
     }).then(res => res.json())
-    .then(result => console.log('[WEBHOOK] Submitted webhook: ', result))
-    .catch((e) => console.log("[WEBHOOK] Err: ", e));
+    .then(result => console.log('[TRACKING] Submitted webhook: ', result))
+    .catch((e) => console.log("[TRACKING] Err: ", e));
 
     return true;
 };

@@ -1,3 +1,7 @@
+/**
+ * File contains event subscription related functions
+ */
+
 const { web3 } = require('./web3');
 
 /**
@@ -8,15 +12,15 @@ const { web3 } = require('./web3');
  */
 const syncBlocks = async (curBlock, actions) => {
     let latestBlock = await web3.eth.getBlockNumber();
-    console.log('[BLOCKS SYNC] latest block: ', latestBlock);
+    console.log('[SYNC] Latest block: ', latestBlock);
     
     let syncedBlock = await _syncBlocksTo(curBlock, latestBlock, actions);
-    console.log('[BLOCKS SYNC] latest synced block: ', syncedBlock);
+    console.log('[SYNC] Latest synced block: ', syncedBlock);
 
-    console.log('[BLOCKS SYNC] Subscribing to new block headers...');
+    console.log('[SYNC] Subscribing to new block headers...');
 
     web3.eth.subscribe("newBlockHeaders", (error, result) => {
-        if (error) console.log("Web3: Sync error ", error);
+        if (error) console.error("[SYNC] Web3: Sync error ", error);
     }).on("data", async (header) => {
         return (await _processBlock(header.number, actions));
     });
@@ -58,8 +62,8 @@ const _syncBlocksTo = async (curBlock, destBlock, actions) => {
     if (curBlock >= destBlock) {
         return curBlock;
     }
-    console.log('[BLOCKS SYNC] curBlock: ', curBlock);
-    console.log('[BLOCKS SYNC] destBlock: ', destBlock);
+    console.log('[SYNC] CURRENT BLOCK: ', curBlock);
+    console.log('[SYNC] DESTINATION BLOCK: ', destBlock);
 
     await _processBlock(curBlock + 1, actions);
 

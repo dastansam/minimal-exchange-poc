@@ -31,17 +31,17 @@ const derive = async (userId) => {
  */
 const moveToColdWallet = async (userId, txHash) => {
     const wallet = getProvider(userId);
-    
-    // get wallet instance
-    const web3 = new Web3(wallet);
 
-    const txValue = await _getTxValue(txHash);
+    const txValue = await _getTxValue(userId, txHash);
 
     if (!txValue) return false;
+    
     console.log('[TRANSFER] value: ', txValue);
     if (txValue.type === "ERC20") {
-        return (await _sendERC20Transfer(txValue, wallet, web3));
+        return (await _sendERC20Transfer(txValue, wallet));
     }
+
+    const web3 = new Web3(wallet);
 
     // construct transaction payload
     const txPayload = {
@@ -50,78 +50,97 @@ const moveToColdWallet = async (userId, txHash) => {
         value: txValue.value,
     };
 
-    console.log('payload ', txPayload);
-
     const txReceipt = await web3.eth.sendTransaction(txPayload);
 
-    console.log('receipt', txReceipt);
     return txReceipt;
 };
 
 /**
- * In case when user first deposits ERC20 token in the wallet,
- * we need to fill it up with ETH to move it from the 
- * deposit wallet to our cold wallet
+ * In case user deposits ERC20 token in the wallet,
+ * deposit address usually doesn't have ether to pay for gas fees
+ * This sends the necessary amount of gas to move tokens to cold wallet
  * @param {*} address 
  */
 const _fillWalletWithGas = async (address) => {
-    // TO_DO: Estimate gas fees before sending eth
     const mainWallet = getProvider();
     const web3 = new Web3(mainWallet);
-    const balance = await web3.eth.getBalance(address);
-
-    console.log("[FILL] balance: ", balance);
-    
-    // hardcoded value of 70000 Gwei = 0.00006
-    const amount = 70000000000000;
-
-    console.log("[FILL] gas: ", amount.toString());
-    
-    console.log("[FILL] address: ", address);
-    const txReceipt = await web3.eth.sendTransaction({
-        from: mainWallet.getAddress(),
-        to: address,
-        value: amount
-    }); 
-    return txReceipt;
-}
-
-
-const _sendERC20Transfer = async (txValue, wallet, web3) => {
-    const token = new web3.eth.Contract(abi, txValue.contract);
 
     const BN = web3.utils.BN;
+
+    const balance = await web3.eth.getBalance(address);
+
+    console.log("[GAS STATION] Filling with gas: ", balance);
     
-    console.log("[ERC20]: ", wallet.getAddress());
+    // hardcoded average gas fee of 70000 Gwei = 0.00007 ETH
+    // TO_DO: Estimate gas fee before sending eth
+    const estimatedGas = 70000000000000;
 
-    const sender = ""+wallet.getAddress().toString();
-    // await _fillWalletWithGas(wallet.getAddress());
-    // const balanceOf = await token.methods.balanceOf(sender).call({
-    //     gas: 75000, gasPrice: 1500000008
-    // });
+    // send ether only if current balance exceeds estimatedgas
+    if (new BN(balance).gten(estimatedGas)) return false;
+    
+    // This assumes that we always have enough Ether in main wallet
+    await web3.eth.sendTransaction({
+        from: mainWallet.getAddress(),
+        to: address,
+        value: estimatedGas
+    });
 
-    // console.log('[ERC20] bal: ', balanceOf);
-    const receipt = await token.methods.transfer(
-        ""+config.coldWallet.toString(),
-        new BN(txValue.value)
-    ).send({ from: sender, gasPrice: 2000000008, gas: 78534});
-
-    console.log("[ERC20]: ", receipt);
     return true;
 }
 
 /**
- * Get stored tx value from hash
- * @param {*} txHash 
- * @returns 
+ * Send ERC20 token
+ * @param {*} txValue 
+ * @param {*} wallet 
+ * @returns tx receipt
  */
-const _getTxValue = async (txHash) => {
-    const exists = await redis.existsAsync(`eth:tx:${txHash}`);
+const _sendERC20Transfer = async (txValue, wallet) => {
+    const web3 = new Web3(wallet);
+    // instantiate token contract
+    const token = new web3.eth.Contract(abi, txValue.contract);
 
-    if (exists !== 1) return null;
+    const BN = web3.utils.BN;
+    
+    console.log("[ERC20] Moving tokens from: ", wallet.getAddress());
 
-    const txData = await redis.getAsync(`eth:tx:${txHash}`);
-    return JSON.parse(txData);
+    const sender = ""+wallet.getAddress().toString();
+
+    // Add Ether to wallet for gas fees
+    await _fillWalletWithGas(wallet.getAddress());
+
+    const receipt = await token.methods.transfer(
+        ""+config.coldWallet.toString(),
+        new BN(txValue.value)
+    ).send({
+        from: sender
+    });
+
+    return receipt;
+}
+
+/**
+ * Get stored tx value from hash
+ * @param {*} userId
+ * @param {*} txHash 
+ * @returns `TxMetadata` if everything is ok, `null` - otherwise
+ */
+const _getTxValue = async (userId, txHash) => {
+    const wallet = await derive(userId);
+
+    const txExists = await redis.existsAsync(`eth:wallet:txs:${wallet}`);
+    
+    if (txExists !== 1) return null;
+
+    // check if the `txHash` belongs to the given user id
+    const txListRaw = await redis.getAsync(`eth:wallet:txs:${wallet}`);
+
+    if (!txListRaw) return null;
+
+    // TxList is a mapping between: txHash => txMetadata
+    const txList = JSON.parse(txListRaw);
+    if (txHash in txList) return txList[txHash];
+
+    return null;
 }
 
 module.exports = {derive, moveToColdWallet};
