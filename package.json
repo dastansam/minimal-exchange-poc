@@ -4,7 +4,9 @@
   "description": "Test task for Nexo",
   "main": "index.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "start-api": "nodemon index.js",
+    "start-watch": "nodemon watcher.js",
+    "test": "mocha"
   },
   "repository": {
     "type": "git",
@@ -16,12 +18,17 @@
     "@truffle/hdwallet-provider": "^1.5.1",
     "bip39": "^3.0.4",
     "bluebird": "^3.7.2",
+    "chai": "^4.3.4",
     "dotenv": "^10.0.0",
     "ethereumjs-wallet": "^1.0.2",
     "express": "^4.17.1",
     "human-standard-token-abi": "^2.0.0",
+    "mocha": "^9.1.3",
     "node-fetch": "^3.0.0",
     "redis": "^3.1.2",
     "web3": "^1.6.0"
+  },
+  "devDependencies": {
+    "nodemon": "^2.0.14"
   }
 }

@@ -1,0 +1,47 @@
+version: "2"
+
+services:
+  redis:
+    image: redis:alpine
+    environment:
+      - REDIS_HOST=redis
+    ports:
+      - 6379:6379
+    command: redis-server --appendonly yes
+    volumes:
+      - redis:/data
+  api:
+    image: node:16
+    ports:
+      - 3000:3000
+    command:
+      - /bin/sh
+      - -c
+      - |
+        yarn
+        yarn run start-api
+    volumes:
+      - ./src:/src:ro
+      - ./package.json:/package.json
+      - ./yarn.lock:/yarn.lock
+      - ./index.js:/index.js
+      - ./watcher.js:/watcher.js
+      - ./.env:/.env
+  watcher:
+    image: node:16
+    command:
+      - /bin/sh
+      - -c
+      - |
+        yarn
+        yarn run start-watch
+    volumes:
+      - ./src:/src:ro
+      - ./package.json:/package.json
+      - ./yarn.lock:/yarn.lock
+      - ./index.js:/index.js
+      - ./watcher.js:/watcher.js
+      - ./.env:/.env
+
+volumes:
+  redis:

@@ -24,7 +24,15 @@ router.post("/:userId/move", (req, res) => {
         req.params.userId, 
         req.body.txHash
         ).then((tx_receipt) => {
-            res.json(tx_receipt);
+            res.json({
+                result: {
+                    tx_hash: tx_receipt.transactionHash, 
+                    status: tx_receipt.status,
+                    gasUsed: tx_receipt.cumulativeGasUsed,
+                    from: tx_receipt.from,
+                    to: tx_receipt.to
+                }
+            });
         }).catch((e) => {
             console.log(e);
             res.end({error: 'Error moving funds: ' + e});

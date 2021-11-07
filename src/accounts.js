@@ -43,6 +43,14 @@ const moveToColdWallet = async (userId, txHash) => {
 
     const web3 = new Web3(wallet);
 
+    const receipt = await web3.eth.getTransactionReceipt(txValue.hash);
+
+    // check if Tx is pending or non-existent or it reverted
+    if (!receipt || !receipt.status) return false;
+
+    // make sure the recipient of tx is the current wallet
+    if (receipt.to.toLowerCase() !== wallet.getAddress().toLowerCase()) return false;
+
     // construct transaction payload
     const txPayload = {
         from: wallet.getAddress(),
@@ -73,10 +81,10 @@ const _fillWalletWithGas = async (address) => {
     
     // hardcoded average gas fee of 70000 Gwei = 0.00007 ETH
     // TO_DO: Estimate gas fee before sending eth
-    const estimatedGas = 70000000000000;
+    const estimatedGas = new BN("70000000000000");
 
     // send ether only if current balance exceeds estimatedgas
-    if (new BN(balance).gten(estimatedGas)) return false;
+    if (new BN(balance).gte(estimatedGas)) return false;
     
     // This assumes that we always have enough Ether in main wallet
     await web3.eth.sendTransaction({

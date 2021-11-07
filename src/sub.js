@@ -1,7 +1,6 @@
 /**
  * File contains event subscription related functions
  */
-
 const { web3 } = require('./web3');
 
 /**
@@ -11,11 +10,12 @@ const { web3 } = require('./web3');
  * @param {*} actions 
  */
 const syncBlocks = async (curBlock, actions) => {
-    let latestBlock = await web3.eth.getBlockNumber();
-    console.log('[SYNC] Latest block: ', latestBlock);
+    // let latestBlock = await web3.eth.getBlockNumber();
+    console.log('[SYNC] Latest block: ', curBlock);
     
-    let syncedBlock = await _syncBlocksTo(curBlock, latestBlock, actions);
-    console.log('[SYNC] Latest synced block: ', syncedBlock);
+    // TO_DO: Enable syncing all the blocks
+    // let syncedBlock = await _syncBlocksTo(curBlock, latestBlock, actions);
+    // console.log('[SYNC] Latest synced block: ', syncedBlock);
 
     console.log('[SYNC] Subscribing to new block headers...');
 
@@ -25,7 +25,7 @@ const syncBlocks = async (curBlock, actions) => {
         return (await _processBlock(header.number, actions));
     });
 
-    return syncedBlock;
+    return curBlock;
 };
 
 /**
@@ -41,9 +41,11 @@ const _processBlock = async (block, actions) => {
     if (actions.onTransactions) actions.onTransactions(processingBlock.transactions);
     if (actions.onBlock) actions.onBlock(block);
     if (actions.onERC20Transfers) {
+        // Get EVM Transfer Event logs for the given block
         const logs = await web3.eth.getPastLogs({
             fromBlock: block,
             toBlock: block,
+            // hashed value of Transfer event in ERC20 contract
             topics: ["0xddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef"],
         });
         actions.onERC20Transfers(logs);
@@ -55,7 +57,7 @@ const _processBlock = async (block, actions) => {
  * Recursive function to synchronize block up to the latest
  * @param {*} curBlock 
  * @param {*} destBlock 
- * @param {*} actions - 
+ * @param {*} actions - actionst to perform on new block
  * @returns 
  */
 const _syncBlocksTo = async (curBlock, destBlock, actions) => {

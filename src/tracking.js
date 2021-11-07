@@ -3,20 +3,20 @@ const fetch = (...args) => import('node-fetch').then(({default: fetch}) => fetch
 
 const redis = require("./redis");
 const Chain = require("./sub");
-const { web3 } = require('./web3');
+const { web3, getProvider } = require('./web3');
 const config = require('./config');
 
 /**
  * Starts the process of monitoring transactions
  */
 const launch = async () => {
-    let lastSyncedBlock = await redis.getAsync("last-synced-block");
+    // let lastSyncedBlock = await redis.getAsync("last-synced-block");
     let latestBlock = await web3.eth.getBlockNumber();
-    // TO-DO: replace places: latest should be last
-    lastSyncedBlock = latestBlock || lastSyncedBlock;
+    // TO-DO: sync all blocks between lastSynced and latest
+    // lastSyncedBlock = latestBlock;
 
     // Launch syncing block process
-    Chain.syncBlocks(lastSyncedBlock, {
+    Chain.syncBlocks(latestBlock, {
         onBlock: _updateBlockHeader,
         onTransactions: async (txs) => {
             for (let i in txs) {
@@ -67,6 +67,7 @@ const _formatERC20Transfer = (txData) => {
 
 /**
  * Updated the last synced block
+ * NOTE
  * @param {*} header 
  * @returns 
  */
@@ -86,14 +87,20 @@ const _updateBlockHeader = async (header) => {
 const _processTx = async (tx, erc20=false) => {
     // for erc20 Transfer event log, second indice of topics is the `dest` wallet
     const walletAddress = `${tx.to}`.toLowerCase();
+    const senderAddress = `${tx.from}`.toLowerCase();
 
-    console.log('[TRACKING] TO: ', walletAddress);
-    
+    // Sometimes we send some ether to the wallet from our main wallet
+    // e.g when we need some gas to move ERC20 token from deposit address
+    // we need to make sure that `tracker` doesn't catch this transaction
+    if (senderAddress === config.coldWallet.toLowerCase()) return false;
+
     // check if the derived address is our deposit address
     const watchedAddress = await redis.existsAsync(`eth:wallet:${walletAddress}`);
     if (watchedAddress !== 1) {
         return false;
     }
+    
+    console.log('[TRACKING] TO: ', walletAddress);
     
     // Get user id mapped to the wallet
     const userId = await redis.getAsync(`eth:wallet:${walletAddress}`);
@@ -123,12 +130,14 @@ const _processTx = async (tx, erc20=false) => {
         txData = Object.assign(txData, parsedTxData);
     }
     
-    console.log('[TRACKING] TxData: ', txData);
+    console.log('[TRACKING] TxHash: ', tx.hash);
 
     await redis.setAsync(`eth:wallet:txs:${walletAddress}`, JSON.stringify(txData));
+    // mark tx hash as processed
+    await redis.setAsync(`eth:tx:${tx.hash}`, 1);
     
     // TO_DO: for erc20, get token decimals and compute amount of tokens
-    // const amountInToken = tx.value / 1**(token.decimals);
+    // const amountInToken = tx.value / 10**(token.decimals);
     const amountInEther = Web3.utils.fromWei(tx.value);
 
     const webhookPayload = {
@@ -146,8 +155,8 @@ const _processTx = async (tx, erc20=false) => {
         body: JSON.stringify(webhookPayload),
         headers: { "Content-Type": 'application/json'}
     }).then(res => res.json())
-    .then(result => console.log('[TRACKING] Submitted webhook: ', result))
-    .catch((e) => console.log("[TRACKING] Err: ", e));
+        .then(result => console.log('[TRACKING] Submitted webhook: ', result))
+        .catch((e) => console.log("[TRACKING] Err: ", e));
 
     return true;
 };
