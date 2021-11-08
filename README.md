@@ -51,6 +51,10 @@ In a traditional CEX when user wants to deposit `ETH` or `ERC20` tokens, a uniqu
   - Deterministic
   - Single point of failure
 
+- #### Generate forwarding smart contracts for each user
+  - High gas fees for contract deployment
+  - Single transaction
+
 This project uses HD wallets to manage user deposit addresses, where for each user the deposit address is derived from the `userId`.
 
 ## Watcher Service
